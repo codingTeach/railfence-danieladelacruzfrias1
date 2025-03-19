@@ -1,72 +1,62 @@
 import javax.swing.JOptionPane
 
-fun railFenceEncrypt(text: String, rails: Int): String {
-    if (rails <= 1) return text
-
-    val fence = Array(rails) { StringBuilder() }
-    var rail = 0
-    var direction = 1
+fun encryptRailFence(text: String, key: Int): String {
+    val rail = Array(key) { CharArray(text.length) { '\n' } }
+    var dirDown = false
+    var row = 0
+    var col = 0
 
     for (char in text) {
-        fence[rail].append(char)
-        rail += direction
-        if (rail == 0 || rail == rails - 1) direction *= -1
+        if (row == 0 || row == key - 1) dirDown = !dirDown
+        rail[row][col++] = char
+        row += if (dirDown) 1 else -1
     }
 
-    return fence.joinToString("")
+    return rail.joinToString(separator = "") { it.filter { ch -> ch != '\n' }.joinToString("") }
 }
 
-fun railFenceDecrypt(cipherText: String, rails: Int): String {
-    if (rails <= 1) return cipherText
+fun decryptRailFence(cipher: String, key: Int): String {
+    val rail = Array(key) { CharArray(cipher.length) { '\n' } }
+    var dirDown = true
+    var row = 0
+    var col = 0
 
-    val pattern = mutableListOf<Int>()
-    var rail = 0
-    var direction = 1
-
-    for (i in cipherText.indices) {
-        pattern.add(rail)
-        rail += direction
-        if (rail == 0 || rail == rails - 1) direction *= -1
+    for (i in cipher.indices) {
+        if (row == 0) dirDown = true
+        if (row == key - 1) dirDown = false
+        rail[row][col++] = '*'
+        row += if (dirDown) 1 else -1
     }
 
-    val fence = Array(rails) { StringBuilder() }
-    val indices = pattern.sorted().withIndex()
     var index = 0
-
-    for ((i, railIndex) in indices) {
-        fence[railIndex].append(cipherText[i])
+    for (i in 0 until key) {
+        for (j in cipher.indices) {
+            if (rail[i][j] == '*' && index < cipher.length) {
+                rail[i][j] = cipher[index++]
+            }
+        }
     }
 
-    val decryptedText = StringBuilder()
-    for (i in pattern.indices) {
-        decryptedText.append(fence[pattern[i]].first())
-        fence[pattern[i]].deleteCharAt(0)
+    val result = StringBuilder()
+    row = 0
+    col = 0
+    dirDown = true
+    for (i in cipher.indices) {
+        if (row == 0) dirDown = true
+        if (row == key - 1) dirDown = false
+        result.append(rail[row][col++])
+        row += if (dirDown) 1 else -1
     }
 
-    return decryptedText.toString()
+    return result.toString()
 }
 
 fun main() {
-    val options = arrayOf("Cifrar", "Descifrar", "Salir")
+    val text = JOptionPane.showInputDialog("Ingrese el texto a cifrar:")
+    val key = JOptionPane.showInputDialog("Ingrese la clave:").toInt()
+    val encryptedText = encryptRailFence(text, key)
+    JOptionPane.showMessageDialog(null, "Texto Cifrado: $encryptedText")
 
-    while (true) {
-        val choice = JOptionPane.showOptionDialog(
-            null, "Seleccione una opción:", "Cifrado Rail Fence",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
-            null, options, options[0]
-        )
-
-        if (choice == 2 || choice == JOptionPane.CLOSED_OPTION) break
-
-        val text = JOptionPane.showInputDialog("Ingrese el texto:")
-        if (text.isNullOrEmpty()) continue
-
-        val railsInput = JOptionPane.showInputDialog("Ingrese el número de rieles:")
-        val rails = railsInput?.toIntOrNull() ?: continue
-
-        val result = if (choice == 0) railFenceEncrypt(text, rails)
-        else railFenceDecrypt(text, rails)
-
-        JOptionPane.showMessageDialog(null, "Resultado: $result")
-    }
+    val decryptedText = decryptRailFence(encryptedText, key)
+    JOptionPane.showMessageDialog(null, "Texto Descifrado: $decryptedText")
 }
